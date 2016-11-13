@@ -10,7 +10,8 @@ namespace ServerApp
     {
         static void Main(string[] args)
         {
-
+            RadioServer server = new RadioServer("127.0.0.1", 7000);
+            server.Run();
         }
     }
 }

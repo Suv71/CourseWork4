@@ -23,7 +23,7 @@ public class MainActivity extends AppCompatActivity {
         _et = (EditText)findViewById(R.id.etMessage);
         _tv = (TextView)findViewById(R.id.tvServerAnswer);
 
-        _client = new Client("78.106.183.156", 6000);
+        _client = new Client("10.175.147.229", 6000);
         _client.run();
     }
 
