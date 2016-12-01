@@ -9,21 +9,40 @@ using System.Threading.Tasks;
 
 namespace ServerApp
 {
-    class RadioServer
+    public class RadioServer
     {
         private string _serverIpAdress;
         private int _port;
         private Socket _listenSocket;
 
+        private List<ClientHandler> _clients;
+
         public RadioServer(string serverIpAdress, int port)
         {
             _serverIpAdress = serverIpAdress;
             _port = port;
+            _clients = new List<ClientHandler>();
+        }
+
+        public void AddClient(ClientHandler client)
+        {
+            _clients.Add(client);
+        }
+
+        public void RemoveClient(int id)
+        {
+            _clients.Remove(_clients.FirstOrDefault(c => c.Id == id));
+        }
+
+        public void SendMessageToClient(int id, byte[] message)
+        {
+            ClientHandler client = _clients.FirstOrDefault(c => c.Id == id);
+            client.SendMessage(message);
         }
 
         public void Run()
         {
-            IPEndPoint serverIpPoint = new IPEndPoint(IPAddress.Any, _port);
+            IPEndPoint serverIpPoint = new IPEndPoint(IPAddress.Parse(_serverIpAdress), _port);
             _listenSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
 
             try
@@ -37,36 +56,9 @@ namespace ServerApp
                 {
                     Socket connectionHandler = _listenSocket.Accept();
 
-                    ClientHandler clientHandler = new ClientHandler(connectionHandler);
-
-                    Thread clientThread = new Thread(new ThreadStart(clientHandler.Process));
-                    clientThread.Start();
-                    
-                    //StringBuilder builder = new StringBuilder();
-                    //int bytes = 0;
-                    //byte[] data = new byte[256];
-                    //int i = 1;
-
-                    //while (!builder.ToString().Equals("End"))
-                    //{
-                    //    if (builder.Length != 0)
-                    //    {
-                    //        builder.Clear();
-                    //    }
-
-                    //    do
-                    //    {
-                    //        bytes = connectionHandler.Receive(data);
-                    //        builder.Append(Encoding.ASCII.GetString(data, 0, bytes));
-                    //    }
-                    //    while (connectionHandler.Available > 0);
-
-                    //    Console.WriteLine(DateTime.Now.ToShortTimeString() + ": " + builder.ToString());
-                    //    string message = "Message received" + i++;
-                    //    data = Encoding.ASCII.GetBytes(message);
-                    //    connectionHandler.Send(data);
-
-                    //connectionHandler.Close();
+                    ClientHandler clientHandler = new ClientHandler(connectionHandler, this);
+                    Console.WriteLine("Новый клиент: " + clientHandler.Id);
+                    new Thread(new ThreadStart(clientHandler.Process)).Start();
                 }
             }
             catch (Exception ex)
@@ -75,8 +67,16 @@ namespace ServerApp
             }
             finally
             {
-               // _listenSocket.Close();
+                _listenSocket.Close();
             }
         }
+
+        //public void DisconnectClients()
+        //{
+        //    foreach(var c in _clients)
+        //    {
+        //        c.
+        //    }
+        //}
     }
 }

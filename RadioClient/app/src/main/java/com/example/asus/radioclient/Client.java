@@ -48,19 +48,32 @@ public class Client extends Thread{
         try
         {
             _clientSocket = new Socket(_serverIP, _serverPort);
+            if(_clientSocket.isConnected())
+            {
+                System.out.println("connected");
+            }
+            else
+            {
+                System.out.println("not connected");
+            }
 
             _outStream = _clientSocket.getOutputStream();
             _inStream = _clientSocket.getInputStream();
 
             Message msg;
-            String temp;
+            byte[] temp;
+            byte[] sizeArray;
+            int fileSize;
+
 
             while(true)
             {
                 if(_inStream.available() > 0)
                 {
-                    temp = GetMessage();
-                    msg = _inputStreamHandler.obtainMessage(0, temp);
+                    sizeArray = GetMessage();
+                    fileSize = BitConverter.toInt32(sizeArray, 0);
+
+                    msg = _inputStreamHandler.obtainMessage(0, fileSize);
                     _inputStreamHandler.sendMessage(msg);
                 }
             }
@@ -80,11 +93,11 @@ public class Client extends Thread{
         }
     }
 
-    public void SendMessage(String message)
+    public void SendMessage(byte[] message)
     {
         try
         {
-            _outStream.write(message.getBytes());
+            _outStream.write(message);
             _outStream.flush();
         }
         catch (IOException e)
@@ -93,22 +106,37 @@ public class Client extends Thread{
         }
     }
 
-    public String GetMessage()
+    public byte[] GetMessage()
     {
-        byte buf[] = new byte[256];
+        byte buf[] = new byte[1024 * 15];
         int bytes = 0;
-        String temp = "";
+        //String temp = "";
 
         try
         {
-            bytes = _inStream.read(buf);
-            temp = new String(buf, 0, bytes);
+            do
+            {
+                bytes += _inStream.read(buf);
+            }while (_inStream.available() > 0);
+
+            //temp = new String(buf, 0, bytes);
         }
         catch (IOException e)
         {
             e.printStackTrace();
         }
-        return temp;
+
+        if(bytes < 1024 * 15)
+        {
+            byte result[] = new byte[bytes];
+            for (int i = 0; i < bytes; i++)
+            {
+                result[i] = buf[i];
+            }
+            return result;
+        }
+
+        return buf;
     }
 
     public void Close()

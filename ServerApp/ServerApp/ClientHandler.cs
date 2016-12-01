@@ -7,52 +7,89 @@ using System.Threading.Tasks;
 
 namespace ServerApp
 {
-    class ClientHandler
+    public class ClientHandler
     {
+        private RadioServer _server;
         private Socket _clientSocket;
+        public int Id { get; private set; }
 
-        public ClientHandler(Socket clientSocket)
+
+        public ClientHandler(Socket clientSocket, RadioServer server)
         {
+            Random rand = new Random();
             _clientSocket = clientSocket;
-        }
+            Id = rand.Next(1,65000);
+            _server = server;
+            server.AddClient(this);
+        } 
 
         public void Process()
         {
-            StringBuilder builder = new StringBuilder();
-            int bytes = 0;
-            byte[] data = new byte[256];
-            int i = 1;
-
+            //StringBuilder builder = new StringBuilder();
+            byte[] temp;
+           
             try
             {
-                while (_clientSocket.Connected)
+                while (true)
                 {
-                    if (builder.Length != 0)
+                    temp = GetMessage();
+                    //builder.Append(GetMessage());
+                    if(temp.Length == 0)
                     {
-                        builder.Clear();
+                        break;
                     }
-
-                    do
+                    else
                     {
-                        bytes = _clientSocket.Receive(data);
-                        builder.Append(Encoding.ASCII.GetString(data, 0, bytes));
+                        Console.WriteLine(Id + " Количество байт = " + temp.Length);
+                        _server.SendMessageToClient(Id, temp);
+                        //temp = null;
                     }
-                    while (_clientSocket.Available > 0);
-
-                    Console.WriteLine(DateTime.Now.ToShortTimeString() + ": " + builder.ToString());
-                    string message = "Message received" + i++;
-                    data = Encoding.ASCII.GetBytes(message);
-                    _clientSocket.Send(data);
                 }
             }
-            catch(SocketException ex)
+            catch (SocketException ex)
             {
                 Console.WriteLine(ex.Message);
             }
             finally
             {
+                Console.WriteLine("Клиент минус: " + Id);
+                _server.RemoveClient(Id);
                 _clientSocket.Close();
             }
+        }
+
+        public void SendMessage(byte[] message)
+        {
+            //byte[] data = new byte[256];
+            //data = Encoding.ASCII.GetBytes(message);
+            _clientSocket.Send(message);
+        }
+
+        public byte[] GetMessage()
+        {
+            //StringBuilder builder = new StringBuilder();
+            byte[] data = new byte[1024 * 15];
+            int bytes = 0;
+
+            do
+            {
+                bytes += _clientSocket.Receive(data);
+                //builder.Append(Encoding.ASCII.GetString(data, 0, bytes));
+            }
+            while (_clientSocket.Available > 0);
+
+            Console.WriteLine("Количество считанных байтов = " + bytes);
+            if(bytes < 1024 * 15)
+            {
+                byte[] result = new byte[bytes];
+                for (int i = 0; i < bytes; i++)
+                {
+                    result[i] = data[i];
+                }
+                return result;
+            }
+            
+            return data;
         }
 
     }

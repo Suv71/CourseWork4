@@ -51,5 +51,40 @@
             android:id="@+id/tvServerAnswer"
             android:layout_marginTop="10dp"/>
 
+        <Button
+            android:text="Exit"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:id="@+id/btnAppExit"
+            android:onClick="OnClickAppExit"/>
+
+        <Button
+            android:text="Start Record"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:id="@+id/btnStartRecord"
+            android:onClick="recordStart"/>
+
+        <Button
+            android:text="Stop Record"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:id="@+id/btnStopRecord"
+            android:onClick="recordStop"/>
+
+        <Button
+            android:text="Start playing"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:id="@+id/btnStartPlay"
+            android:onClick="playStart"/>
+
+        <Button
+            android:text="Stop playing"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:id="@+id/btnStopPlay"
+            android:onClick="playStop"/>
+
     </LinearLayout>
 </LinearLayout>
