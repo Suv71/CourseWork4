@@ -21,6 +21,7 @@ namespace ServerApp
         {
             _serverIpAdress = serverIpAdress;
             _port = port;
+            _listenSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             _clients = new List<ClientHandler>();
         }
 
@@ -43,7 +44,6 @@ namespace ServerApp
         public void Run()
         {
             IPEndPoint serverIpPoint = new IPEndPoint(IPAddress.Parse(_serverIpAdress), _port);
-            _listenSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
 
             try
             {
@@ -70,13 +70,5 @@ namespace ServerApp
                 _listenSocket.Close();
             }
         }
-
-        //public void DisconnectClients()
-        //{
-        //    foreach(var c in _clients)
-        //    {
-        //        c.
-        //    }
-        //}
     }
 }

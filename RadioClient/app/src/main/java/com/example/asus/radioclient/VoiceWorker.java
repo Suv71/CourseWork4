@@ -44,17 +44,7 @@ public class VoiceWorker
             outFile.delete();
         }
 
-        if(outFile != null)
-        {
-            System.out.println("Файл создан");
-        }
-
         _recorder = new MediaRecorder();
-
-        if(_recorder != null)
-        {
-            System.out.println("Media recorder создан");
-        }
 
         _recorder.setAudioSource(MediaRecorder.AudioSource.MIC);
 
@@ -72,7 +62,6 @@ public class VoiceWorker
         }
 
         _recorder.start();
-        System.out.println("Запись начата");
     }
 
     public void StopRecord()
@@ -80,7 +69,6 @@ public class VoiceWorker
         if (_recorder != null)
         {
             _recorder.stop();
-            System.out.println("Запись остановлена");
         }
     }
 
@@ -99,6 +87,7 @@ public class VoiceWorker
             e.printStackTrace();
         }
     }
+
 
     public void FreeResources()
     {

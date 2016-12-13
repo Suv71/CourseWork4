@@ -12,21 +12,23 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 
+import java.io.File;
+import java.io.IOException;
+
 public class MainActivity extends AppCompatActivity {
     private Client _client;
-    private Button _btn;
-    private EditText _et;
-    private TextView _tv;
+    //private Button _btn;
+    //private EditText _et;
+    //private TextView _tv;
     private Handler _inputStreamHandler;
 
-    private MediaRecorder mediaRecorder;
-    private MediaPlayer mediaPlayer;
     private String fileName;
     private String fileName2;
 
     private byte[] temp;
-    private byte[] resul;
-    private int byteNumber;
+
+    private VoiceWorker _voiceWorker;
+    private FileWorker _fileWorker;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -34,16 +36,16 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         fileName = Environment.getExternalStorageDirectory() + "/record.3gpp";
+
         fileName2 = Environment.getExternalStorageDirectory() + "/record2.3gpp";
 
-        System.out.println(fileName);
-        System.out.println(fileName2);
+        //_btn = (Button)findViewById(R.id.btnSend);
+        //_et = (EditText)findViewById(R.id.etMessage);
+        //_tv = (TextView)findViewById(R.id.tvServerAnswer);
 
-        _btn = (Button)findViewById(R.id.btnSend);
-        _et = (EditText)findViewById(R.id.etMessage);
-        _tv = (TextView)findViewById(R.id.tvServerAnswer);
+        _voiceWorker = new VoiceWorker();
+        _fileWorker = new FileWorker();
 
-        byteNumber = 0;
 
         _inputStreamHandler = new Handler()
         {
@@ -52,57 +54,44 @@ public class MainActivity extends AppCompatActivity {
             {
                 super.handleMessage(msg);
 
-                //byte res[] = (byte[])msg.obj;
-                int fileSize = (int)msg.obj;
-                System.out.println("File size = " + fileSize);
-                //System.out.println("Количество полученных байтов = " + res.length);
-                //byteNumber += res.length;
-                //System.out.println("byteNumber сейчас = " + byteNumber);
-
-                /*if(byteNumber != temp.length)
-                {
-                    resul = BiggerArray(resul, res);
-                }
-                else
-                {
-                    resul = BiggerArray(resul, res);
-                    BytesToFile(resul, fileName2);
-                    try
-                    {
-                        releasePlayer();
-                        mediaPlayer = new MediaPlayer();
-                        mediaPlayer.setDataSource(fileName2);
-                        mediaPlayer.prepare();
-                        mediaPlayer.start();
-                    } catch (Exception e)
-                    {
-                        e.printStackTrace();
-                    }
-                }*/
-
-
-                //_tv.setText(msg.obj.toString());
+                byte res[] = (byte[])msg.obj;
+                _fileWorker.BytesToFile(res, fileName2);
+                _voiceWorker.Play(fileName2);
             }
         };
 
-        _client = new Client("10.175.147.229", 31010, _inputStreamHandler);
-        _client.start();
-        System.out.println("Клиентский поток стартовал");
+        _client = new Client("192.168.0.101", 31010, _inputStreamHandler);
+        new Thread(_client).start();
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        releasePlayer();
-        releaseRecorder();
+        _voiceWorker.FreeResources();
         _client.Close();
     }
 
+    public void recordStart(View v)
+    {
+        _voiceWorker.StartRecord(fileName);
+    }
+
+    public void recordStop(View v)
+    {
+        _voiceWorker.StopRecord();
+    }
+
+    public void playStart(View v)
+    {
+        _voiceWorker.Play(fileName);
+    }
+
+
     public void OnClickSend(View view)
     {
-        _client.SendMessage(BitConverter.getBytes(10000));
-        //System.out.println("Количество байтов в temp = " + temp.length);
-        //_client.SendMessage(temp);
+        temp = _fileWorker.FileToBytes(fileName);
+        _client.SendMessage(BitConverter.getBytes(temp.length));
+        _client.SendMessage(temp);
     }
 
     public void OnClickAppExit(View view)

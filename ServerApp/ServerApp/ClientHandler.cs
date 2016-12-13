@@ -25,24 +25,22 @@ namespace ServerApp
 
         public void Process()
         {
-            //StringBuilder builder = new StringBuilder();
             byte[] temp;
-           
+
             try
             {
                 while (true)
                 {
                     temp = GetMessage();
-                    //builder.Append(GetMessage());
+
                     if(temp.Length == 0)
                     {
                         break;
                     }
                     else
                     {
-                        Console.WriteLine(Id + " Количество байт = " + temp.Length);
+                        Console.WriteLine(Id + " Количество принятых и отправляемых байт = " + temp.Length);
                         _server.SendMessageToClient(Id, temp);
-                        //temp = null;
                     }
                 }
             }
@@ -54,32 +52,25 @@ namespace ServerApp
             {
                 Console.WriteLine("Клиент минус: " + Id);
                 _server.RemoveClient(Id);
+                _clientSocket.Shutdown(SocketShutdown.Both);
                 _clientSocket.Close();
             }
         }
 
         public void SendMessage(byte[] message)
         {
-            //byte[] data = new byte[256];
-            //data = Encoding.ASCII.GetBytes(message);
             _clientSocket.Send(message);
         }
 
         public byte[] GetMessage()
         {
-            //StringBuilder builder = new StringBuilder();
-            byte[] data = new byte[1024 * 15];
+            byte[] data = new byte[1024 * 20];
             int bytes = 0;
 
-            do
-            {
-                bytes += _clientSocket.Receive(data);
-                //builder.Append(Encoding.ASCII.GetString(data, 0, bytes));
-            }
-            while (_clientSocket.Available > 0);
+            bytes = _clientSocket.Receive(data);
+            
 
-            Console.WriteLine("Количество считанных байтов = " + bytes);
-            if(bytes < 1024 * 15)
+            if(bytes < 1024 * 20)
             {
                 byte[] result = new byte[bytes];
                 for (int i = 0; i < bytes; i++)

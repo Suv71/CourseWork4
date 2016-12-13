@@ -23,31 +23,29 @@ public final class BitConverter
                 | ((data[offset + 3] & 0xFF) << 24);
     }
 
-    public byte[] MergeArrays(byte[] first, byte[] second)
+    public static byte[] MergeArrays(byte[] first, byte[] second)
     {
         byte[] res;
-        if(first == null)
-        {
-            res = new byte[second.length];
-            for(int i = 0; i < second.length; i++)
-            {
-                res[i] = second[i];
-            }
-        }
-        else
+        if(first != null && second != null)
         {
             res = new byte[first.length + second.length];
             for(int i = 0; i < first.length; i++)
             {
                 res[i] = first[i];
             }
+
             int j = first.length;
             for(int i = 0; i < second.length; i++)
             {
                 res[j++] = second[i];
             }
+
+            return res;
+        }
+        else
+        {
+            return null;
         }
 
-        return res;
     }
 }

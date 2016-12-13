@@ -25,7 +25,7 @@ import java.nio.charset.Charset;
  * Created by ASUS on 13.11.2016.
  */
 
-public class Client extends Thread{
+public class Client implements Runnable{
     private String _serverIP;
     private int _serverPort;
     private Socket _clientSocket;
@@ -48,34 +48,46 @@ public class Client extends Thread{
         try
         {
             _clientSocket = new Socket(_serverIP, _serverPort);
-            if(_clientSocket.isConnected())
+
+            /*if(_clientSocket.isConnected())
             {
                 System.out.println("connected");
             }
             else
             {
                 System.out.println("not connected");
-            }
+            }*/
 
             _outStream = _clientSocket.getOutputStream();
             _inStream = _clientSocket.getInputStream();
 
             Message msg;
-            byte[] temp;
-            byte[] sizeArray;
+            byte[] sizeArray = new byte[4];
             int fileSize;
-
+            byte[] temp;
+            int i;
 
             while(true)
             {
-                if(_inStream.available() > 0)
-                {
-                    sizeArray = GetMessage();
-                    fileSize = BitConverter.toInt32(sizeArray, 0);
+                sizeArray = GetMessage();
+                fileSize = BitConverter.toInt32(sizeArray, 0);
 
-                    msg = _inputStreamHandler.obtainMessage(0, fileSize);
-                    _inputStreamHandler.sendMessage(msg);
-                }
+                temp = null;
+
+                do
+                {
+                    if (temp == null)
+                    {
+                        temp = GetMessage();
+                    }
+                    else
+                    {
+                        temp = BitConverter.MergeArrays(temp, GetMessage());
+                    }
+                }while (temp.length < fileSize);
+
+                msg = _inputStreamHandler.obtainMessage(0, temp);
+                _inputStreamHandler.sendMessage(msg);
             }
 
         }
@@ -108,25 +120,20 @@ public class Client extends Thread{
 
     public byte[] GetMessage()
     {
-        byte buf[] = new byte[1024 * 15];
+        byte buf[] = new byte[1024 * 20];
         int bytes = 0;
-        //String temp = "";
 
         try
         {
-            do
-            {
-                bytes += _inStream.read(buf);
-            }while (_inStream.available() > 0);
+            bytes = _inStream.read(buf);
 
-            //temp = new String(buf, 0, bytes);
         }
         catch (IOException e)
         {
             e.printStackTrace();
         }
 
-        if(bytes < 1024 * 15)
+        if(bytes < 1024 * 20)
         {
             byte result[] = new byte[bytes];
             for (int i = 0; i < bytes; i++)
