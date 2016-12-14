@@ -3,6 +3,8 @@ package com.example.asus.radioclient;
 import android.icu.text.UnicodeSet;
 import android.os.Handler;
 import android.os.Message;
+import android.os.Parcel;
+import android.os.Parcelable;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -16,7 +18,9 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
+import java.io.Serializable;
 import java.io.UTFDataFormatException;
+import java.net.ConnectException;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.nio.charset.Charset;
@@ -35,6 +39,8 @@ public class Client implements Runnable{
 
     private Handler _inputStreamHandler;
 
+    public static final int  msgError = 100;
+
     public Client(String serverIP, int serverPort, Handler inputStreamHandler)
     {
         _serverIP = serverIP;
@@ -45,27 +51,18 @@ public class Client implements Runnable{
     @Override
     public void run()
     {
+        Message msg;
         try
         {
             _clientSocket = new Socket(_serverIP, _serverPort);
 
-            /*if(_clientSocket.isConnected())
-            {
-                System.out.println("connected");
-            }
-            else
-            {
-                System.out.println("not connected");
-            }*/
-
             _outStream = _clientSocket.getOutputStream();
             _inStream = _clientSocket.getInputStream();
 
-            Message msg;
-            byte[] sizeArray = new byte[4];
+
+            byte[] sizeArray;
             int fileSize;
             byte[] temp;
-            int i;
 
             while(true)
             {
@@ -91,9 +88,10 @@ public class Client implements Runnable{
             }
 
         }
-        catch (UnknownHostException e)
+        catch (ConnectException e)
         {
             e.printStackTrace();
+            _inputStreamHandler.sendEmptyMessage(msgError);
         }
         catch (IOException e)
         {
@@ -118,7 +116,7 @@ public class Client implements Runnable{
         }
     }
 
-    public byte[] GetMessage()
+    private byte[] GetMessage()
     {
         byte buf[] = new byte[1024 * 20];
         int bytes = 0;
@@ -146,13 +144,34 @@ public class Client implements Runnable{
         return buf;
     }
 
+    public boolean TestConnection()
+    {
+        if(_clientSocket.isConnected())
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
+
     public void Close()
     {
         try
         {
-            _inStream.close();
-            _outStream.close();
-            _clientSocket.close();
+            if(_inStream != null)
+            {
+                _inStream.close();
+            }
+            if(_outStream != null)
+            {
+                _outStream.close();
+            }
+            if(_clientSocket != null)
+            {
+                _clientSocket.close();
+            }
         }
         catch (IOException e)
         {
