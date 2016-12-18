@@ -23,6 +23,27 @@ public final class BitConverter
                 | ((data[offset + 3] & 0xFF) << 24);
     }
 
+    public static int[] ArraysByteToInt(byte[] in)
+    {
+        if(in != null)
+        {
+            int[] res = new int[in.length / 4];
+
+            int j = 0;
+            for (int i = 0; i < res.length; i++)
+            {
+                res[i] = toInt32(in, j);
+                j += 4;
+            }
+
+            return res;
+        }
+        else
+        {
+            return null;
+        }
+    }
+
     public static byte[] MergeArrays(byte[] first, byte[] second)
     {
         byte[] res;

@@ -5,6 +5,7 @@ import android.os.Handler;
 import android.os.Message;
 import android.os.Parcel;
 import android.os.Parcelable;
+import android.util.Log;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -30,6 +31,20 @@ import java.nio.charset.Charset;
  */
 
 public class Client implements Runnable{
+
+    public static final int messageToClient = 1;
+    public static final int newClient = 2;
+    public static final int clientOut = 3;
+    public static final int connect = 4;
+    public static final int disconnect = 5;
+    public static final int activeClients = 6;
+
+    public static final int checkConnectionState = 50;
+    public static final int connectionSuccessfully = 51;
+    public static final int connectionUnSuccessfully = 52;
+
+    public static final int  connectErr = 100;
+
     private String _serverIP;
     private int _serverPort;
     private Socket _clientSocket;
@@ -37,63 +52,58 @@ public class Client implements Runnable{
     private InputStream _inStream;
     private OutputStream _outStream;
 
-    private Handler _inputStreamHandler;
+    private Handler _clientHandler;
 
-    public static final int  msgError = 100;
 
-    public Client(String serverIP, int serverPort, Handler inputStreamHandler)
+
+    public Client(String serverIP, int serverPort, Handler clientHandler)
     {
         _serverIP = serverIP;
         _serverPort = serverPort;
-        _inputStreamHandler = inputStreamHandler;
+        _clientHandler = clientHandler;
     }
 
     @Override
     public void run()
     {
-        Message msg;
         try
         {
+            _clientHandler.sendEmptyMessageDelayed(checkConnectionState, 5000);
             _clientSocket = new Socket(_serverIP, _serverPort);
 
             _outStream = _clientSocket.getOutputStream();
             _inStream = _clientSocket.getInputStream();
 
-
-            byte[] sizeArray;
-            int fileSize;
-            byte[] temp;
+            byte[] commandBuf;
+            int command = 0;
 
             while(true)
             {
-                sizeArray = GetMessage();
-                fileSize = BitConverter.toInt32(sizeArray, 0);
+                commandBuf = GetMessage(4);
 
-                temp = null;
+                command = BitConverter.toInt32(commandBuf, 0);
 
-                do
+                if (command == 0)
                 {
-                    if (temp == null)
-                    {
-                        temp = GetMessage();
-                    }
-                    else
-                    {
-                        temp = BitConverter.MergeArrays(temp, GetMessage());
-                    }
-                }while (temp.length < fileSize);
-
-                msg = _inputStreamHandler.obtainMessage(0, temp);
-                _inputStreamHandler.sendMessage(msg);
+                    break;
+                }
+                else
+                {
+                    HandleCommand(command);
+                }
             }
 
         }
         catch (ConnectException e)
         {
             e.printStackTrace();
-            _inputStreamHandler.sendEmptyMessage(msgError);
+            _clientHandler.sendEmptyMessage(connectErr);
         }
         catch (IOException e)
+        {
+            e.printStackTrace();
+        }
+        catch(Exception e)
         {
             e.printStackTrace();
         }
@@ -103,12 +113,91 @@ public class Client implements Runnable{
         }
     }
 
+    private void HandleCommand(int command)
+    {
+        byte[] temp = null;
+        Message msg;
+
+        switch(command)
+        {
+            case messageToClient:
+            {
+                int id = BitConverter.toInt32(GetMessage(4), 0);
+                int fileSize = BitConverter.toInt32(GetMessage(4), 0);
+
+                do
+                {
+                    if (temp == null)
+                    {
+                        temp = GetMessage(0);
+                    }
+                    else
+                    {
+                        temp = BitConverter.MergeArrays(temp, GetMessage(0));
+                    }
+                }while (temp.length < fileSize);
+
+                Log.d("Клиент", "Размер принятого буффера = " + temp.length);
+
+                msg = _clientHandler.obtainMessage(messageToClient, id, 0, temp);
+                _clientHandler.sendMessage(msg);
+
+                break;
+            }
+
+            case newClient:
+            {
+                int nickSize = BitConverter.toInt32(GetMessage(4), 0);
+                temp = GetMessage(nickSize);
+
+                msg = _clientHandler.obtainMessage(newClient, temp);
+                _clientHandler.sendMessage(msg);
+
+                break;
+            }
+
+            case clientOut:
+            {
+                //надо еще принимать ник ушедшего
+                int id = BitConverter.toInt32(GetMessage(4), 0);
+
+                msg = _clientHandler.obtainMessage(clientOut, id);
+                _clientHandler.sendMessage(msg);
+
+                break;
+            }
+
+            case connect:
+            {
+
+                break;
+            }
+
+
+            case disconnect:
+            {
+
+                break;
+            }
+
+            case activeClients:
+            {
+
+                break;
+            }
+
+            default:
+                break;
+        }
+    }
+
     public void SendMessage(byte[] message)
     {
         try
         {
             _outStream.write(message);
             _outStream.flush();
+            Log.d("Клиент", "Ушло сообщение на сервер");
         }
         catch (IOException e)
         {
@@ -116,45 +205,74 @@ public class Client implements Runnable{
         }
     }
 
-    private byte[] GetMessage()
+    public boolean CheckConnection()
     {
-        byte buf[] = new byte[1024 * 20];
-        int bytes = 0;
-
         try
         {
-            bytes = _inStream.read(buf);
-
+            if(_clientSocket.isConnected())
+            {
+                return true;
+            }
+            else
+            {
+                return false;
+            }
         }
-        catch (IOException e)
+        catch(NullPointerException e)
         {
             e.printStackTrace();
+            return false;
         }
 
-        if(bytes < 1024 * 20)
+    }
+
+    private byte[] GetMessage(int byteNumber)
+    {
+        byte[] buf;
+
+        if(byteNumber == 0)
         {
-            byte result[] = new byte[bytes];
-            for (int i = 0; i < bytes; i++)
+            buf = new byte[1024 * 20];
+            int bytes = 0;
+
+            try
             {
-                result[i] = buf[i];
+                bytes = _inStream.read(buf);
+
             }
-            return result;
+            catch (IOException e)
+            {
+                e.printStackTrace();
+            }
+
+            if(bytes < 1024 * 20)
+            {
+                byte result[] = new byte[bytes];
+                for (int i = 0; i < bytes; i++)
+                {
+                    result[i] = buf[i];
+                }
+                return result;
+            }
+        }
+        else
+        {
+            buf = new byte[byteNumber];
+
+            try
+            {
+                _inStream.read(buf, 0, byteNumber);
+
+            }
+            catch (IOException e)
+            {
+                e.printStackTrace();
+            }
         }
 
         return buf;
     }
 
-    public boolean TestConnection()
-    {
-        if(_clientSocket.isConnected())
-        {
-            return true;
-        }
-        else
-        {
-            return false;
-        }
-    }
 
     public void Close()
     {

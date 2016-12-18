@@ -19,14 +19,14 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Логин" />
+            android:text="Ip-адрес сервера:" />
 
         <EditText
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:inputType="textPersonName"
-            android:text=""
-            android:id="@+id/etLogin"
+            android:inputType="date"
+            android:text="192.168.0.102"
+            android:id="@+id/etIpAdress"
             android:layout_marginLeft="10dp"/>
 
     </LinearLayout>
@@ -39,14 +39,14 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Пароль" />
+            android:text="Порт сервера:" />
 
         <EditText
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:inputType="textPersonName"
-            android:text=""
-            android:id="@+id/etPassword"
+            android:inputType="number"
+            android:text="31010"
+            android:id="@+id/etPort"
             android:layout_marginLeft="10dp"/>
 
     </LinearLayout>
@@ -59,38 +59,56 @@
         <Button
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Send"
-            android:id="@+id/btnSend"
+            android:text="Подключиться к серверу"
+            android:id="@+id/btnConnectServer"
             android:layout_gravity="center"
-            android:onClick="OnClickSend" />
+            android:onClick="ConnectServer" />
 
-        <TextView
-            android:text="Server answer"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:id="@+id/tvServerAnswer"
-            android:layout_marginTop="10dp"/>
-
-        <Button
-            android:text="Start Record"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:id="@+id/btnStartRecord"
-            android:onClick="recordStart"/>
+            android:orientation="horizontal">
 
-        <Button
-            android:text="Stop Record"
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Состояние сервера:" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="10dp"
+                android:id="@+id/tvServerState"
+                android:text="Не подключен" />
+
+        </LinearLayout>
+
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:id="@+id/btnStopRecord"
-            android:onClick="recordStop"/>
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Ник:" />
+
+            <EditText
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:inputType="text"
+                android:id="@+id/etNickname"
+                android:layout_marginLeft="10dp"/>
+
+        </LinearLayout>
 
         <Button
-            android:text="Start playing"
+            android:text="Подкючиться к чату"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:id="@+id/btnStartPlay"
-            android:onClick="playStart"/>
+            android:id="@+id/btnConnectChat"
+            android:enabled="false"
+            android:onClick="ConnectChat"/>
 
     </LinearLayout>
 </LinearLayout>

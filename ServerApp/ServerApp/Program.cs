@@ -12,7 +12,7 @@ namespace ServerApp
         
         static void Main(string[] args)
         {
-            RadioServer server = new RadioServer("192.168.0.101", 31010);
+            RadioServer server = new RadioServer("192.168.0.102", 31010);
             new Thread(new ThreadStart(server.Run)).Start();
         }
     }
