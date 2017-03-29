@@ -9,32 +9,26 @@ namespace ServerApp
 {
     public class ClientHandler
     {
-        /*public static int messageToClient = 1;
-        public static int newClient = 2;
-        public static int clientOut = 3;
-        public static int connect = 4;
-        public static int disconnect = 5;
-        public static int activeClients = 6;*/
-
         private RadioServer _server;
         private Socket _clientSocket;
         public int Id { get; private set; }
+        public String Nickname { get; private set; }
 
 
         public ClientHandler(Socket clientSocket, RadioServer server)
         {
-            Random rand = new Random();
             _clientSocket = clientSocket;
-            //Id = rand.Next(1,65000);
             _server = server;
-            if (_server._clients.Count == 0)
+
+            if (_server.GetClients().Count == 0)
             {
                 Id = 1;
             }
             else
             {
-                Id = _server._clients.Last().Id + 1;
+                Id = _server.GetClients().Last().Id + 1;
             }
+
             server.AddClient(this);
         } 
 
@@ -55,7 +49,7 @@ namespace ServerApp
                     }
                     else
                     {
-                        Console.WriteLine("Полученное command = " + command);
+                        Console.WriteLine(new StringBuilder("Команда = " + command + " принята на обработку").ToString());
                         HandleCommand(command);
                     }
 
@@ -67,7 +61,7 @@ namespace ServerApp
             }
             finally
             {
-                Console.WriteLine("Клиент минус: " + Id);
+                Console.WriteLine(new StringBuilder("Клиент c id = " + Id + " отключился от сервера").ToString());
                 _server.RemoveClient(Id);
                 _clientSocket.Shutdown(SocketShutdown.Both);
                 _clientSocket.Close();
@@ -82,34 +76,24 @@ namespace ServerApp
             {
                 case Commands.messageToClient:
                     {
-                        int id = BitConverter.ToInt32(GetMessage(4), 0);
-                        Console.WriteLine("Полученное id = " + id);
-                        int fileSize = BitConverter.ToInt32(GetMessage(4), 0);
-                        Console.WriteLine("Полученное fileSize = " + fileSize);
+                        int nickSize = BitConverter.ToInt32(GetMessage(4), 0);
 
-                        _server.SendMessageToClient(id, BitConverter.GetBytes(Commands.messageToClient));
-                        _server.SendMessageToClient(id, BitConverter.GetBytes(Id));
-                        _server.SendMessageToClient(id, BitConverter.GetBytes(fileSize));
+                        String nickname = Encoding.UTF8.GetString(GetMessage(nickSize));
+
+                        int fileSize = BitConverter.ToInt32(GetMessage(4), 0);
+
+                        _server.SendMessageToClient(nickname, BitConverter.GetBytes(Commands.messageToClient));
+                        _server.SendMessageToClient(nickname, BitConverter.GetBytes(Nickname.Length));
+                        _server.SendMessageToClient(nickname, Encoding.UTF8.GetBytes(Nickname));
+                        _server.SendMessageToClient(nickname, BitConverter.GetBytes(fileSize));
                         
                         int count = 0;
                         do
                         {
                             temp = GetMessage(0);
                             count += temp.Length;
-                            _server.SendMessageToClient(id, temp);
+                            _server.SendMessageToClient(nickname, temp);
                         } while (count < fileSize);
-                        Console.WriteLine("Команда на отправку отработала");
-                        break;
-                    }
-
-                case Commands.newClient:
-                    {
-
-                        break;
-                    }
-
-                case Commands.clientOut:
-                    {
 
                         break;
                     }
@@ -117,50 +101,47 @@ namespace ServerApp
                 case Commands.connect:
                     {
                         int nickSize = BitConverter.ToInt32(GetMessage(4), 0);
-                        Console.WriteLine("nickSize = " + nickSize);
                         temp = GetMessage(nickSize);
 
-                        Console.WriteLine("Клиент законнектился " + Encoding.UTF8.GetString(temp));
+                        Nickname = Encoding.UTF8.GetString(temp);
+
+                        Console.WriteLine(new StringBuilder("Клиент " + Nickname + " вошел в чат").ToString());
+
                         _server.SendAllNewClient(Id, temp);
-                        Console.WriteLine("Комманда коннект отработала");
+
+                        _server.AddClientInChat();
+
+                        _server.SendActiveClients(Nickname);
+
                         break;
                     }
 
 
                 case Commands.disconnect:
                     {
-                        Console.WriteLine("Disconnect принят");
-                        _server.SendAllClientOut(Id);
+                        Console.WriteLine(new StringBuilder("Клиент " + Nickname + " покидает чат").ToString());
 
+                        _server.SendAllClientOut(Id, Encoding.UTF8.GetBytes(Nickname));
 
-                        /*Console.WriteLine("Клиент минус: " + Id);
-                        _server.RemoveClient(Id);
-                        _clientSocket.Shutdown(SocketShutdown.Both);
-                        _clientSocket.Close();*/
-
-                        break;
-                    }
-
-                case Commands.activeClients:
-                    {
+                        _server.RemoveClientFromChat();
 
                         break;
                     }
 
                 default:
                     break;
-            }
+            }   
         }
 
         public void SendMessage(byte[] message)
         {
             _clientSocket.Send(message);
-            Console.WriteLine("Отправил байт " + message.Length);
         }
 
         public byte[] GetMessage(int byteNumber)
         {
             byte[] data;
+
             if(byteNumber == 0)
             {
                 data = new byte[1024 * 20];
@@ -176,7 +157,7 @@ namespace ServerApp
                     {
                         result[i] = data[i];
                     }
-                    Console.WriteLine("Принял байт " + result.Length);
+
                     return result;
                 }
             }

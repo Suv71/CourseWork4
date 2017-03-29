@@ -11,10 +11,6 @@ import java.io.UnsupportedEncodingException;
 
 public class NetworkService extends Service {
 
-    final String LOG_TAG = "testService";
-
-
-
     private Client _client;
     private Handler _clientHandler;
 
@@ -30,13 +26,10 @@ public class NetworkService extends Service {
     public void onCreate()
     {
         super.onCreate();
-        Log.d(LOG_TAG, "onCreate");
     }
 
     public int onStartCommand(Intent intent, int flags, int startId)
     {
-        Log.d(LOG_TAG, "onStartCommand");
-
         if(startId == 1)
         {
             String serverIP = intent.getStringExtra("serverIP");
@@ -83,7 +76,7 @@ public class NetworkService extends Service {
                         case Client.newClient:
                         {
                             byte[] res = (byte[])msg.obj;
-                            Intent intent = new Intent("Communication");
+                            Intent intent = new Intent("Chat");
                             intent.putExtra("command", Client.newClient);
 
                             try
@@ -96,35 +89,50 @@ public class NetworkService extends Service {
                             }
 
                             sendBroadcast(intent);
-                            Log.d(LOG_TAG, "Новый клиент прибыл");
                             break;
                         }
                         case Client.messageToClient:
                         {
-                            Log.d(LOG_TAG, "Начало работы команды приема");
-                            int id = msg.arg1;
-                            byte res[] = (byte[])msg.obj;
+                            Intent intent = new Intent("Chat");
 
-                            Log.d(LOG_TAG, "id отправителя = " + id);
-                            Log.d(LOG_TAG, "Размер принятого в хендлер буффера = " + res.length);
+                            if(msg.arg1 == 1)
+                            {
+                                String nickname = msg.obj.toString();
+                                intent.putExtra("command", Client.messageToClient);
+                                intent.putExtra("nickname", nickname);
 
-                            Intent intent = new Intent("Communication");
-                            intent.putExtra("command", Client.messageToClient);
-                            intent.putExtra("id", id);
-                            intent.putExtra("fileBuf", res);
+                                sendBroadcast(intent);
+                            }
+                            else
+                            {
+                                byte res[] = (byte[])msg.obj;
+                                intent.putExtra("command", Client.messageToClient);
+                                intent.putExtra("fileBuf", res);
 
-                            sendBroadcast(intent);
-                            Log.d(LOG_TAG, "Конец работы команды приема");
+                                sendBroadcast(intent);
+                            }
+
                             break;
                         }
 
                         case Client.clientOut:
                         {
-                            Log.d(LOG_TAG, "Команда clientOut работает");
-                            int id = (int)msg.obj;
-                            Intent intent = new Intent("Communication");
+                            String nickname = msg.obj.toString();
+                            Intent intent = new Intent("Chat");
                             intent.putExtra("command", Client.clientOut);
-                            intent.putExtra("id", id);
+                            intent.putExtra("nickname", nickname);
+
+                            sendBroadcast(intent);
+                            break;
+                        }
+
+                        case Client.activeClients:
+                        {
+                            String[] clients = (String[]) msg.obj;
+
+                            Intent intent = new Intent("Chat");
+                            intent.putExtra("command", Client.activeClients);
+                            intent.putExtra("clients", clients);
 
                             sendBroadcast(intent);
                             break;
@@ -143,23 +151,21 @@ public class NetworkService extends Service {
             {
                 case Client.messageToClient:
                 {
-                    int id = intent.getIntExtra("id", 0);
+                    String nickname = intent.getStringExtra("nickname");
                     byte[] temp = intent.getByteArrayExtra("fileBuf");
 
-                    Log.d(LOG_TAG, "id получателя при отправлении" + id);
-                    Log.d(LOG_TAG, "размер буффера при отправлении" + temp.length);
                     _client.SendMessage(BitConverter.getBytes(Client.messageToClient));
-                    _client.SendMessage(BitConverter.getBytes(id));
+                    _client.SendMessage(BitConverter.getBytes(nickname.length()));
+                    _client.SendMessage(nickname.getBytes());
                     _client.SendMessage(BitConverter.getBytes(temp.length));
                     _client.SendMessage(temp);
-                    Log.d(LOG_TAG, "По идее все должно отправиться");
+
                     break;
                 }
 
                 case Client.connect:
                 {
                     int nickSize = intent.getIntExtra("nickSize", 0);
-                    Log.d("nickSize на отправку = ", String.valueOf(nickSize));
                     byte[] temp = intent.getByteArrayExtra("nickname");
 
                     _client.SendMessage(BitConverter.getBytes(Client.connect));
@@ -172,7 +178,6 @@ public class NetworkService extends Service {
                 case Client.disconnect:
                 {
                     _client.SendMessage(BitConverter.getBytes(Client.disconnect));
-
                     break;
                 }
 
@@ -189,6 +194,5 @@ public class NetworkService extends Service {
     {
         _client.Close();
         super.onDestroy();
-        Log.d(LOG_TAG, "onDestroy");
     }
 }

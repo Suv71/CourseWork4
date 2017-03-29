@@ -21,6 +21,7 @@ import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.io.Serializable;
 import java.io.UTFDataFormatException;
+import java.io.UnsupportedEncodingException;
 import java.net.ConnectException;
 import java.net.Socket;
 import java.net.UnknownHostException;
@@ -69,6 +70,7 @@ public class Client implements Runnable{
         try
         {
             _clientHandler.sendEmptyMessageDelayed(checkConnectionState, 5000);
+
             _clientSocket = new Socket(_serverIP, _serverPort);
 
             _outStream = _clientSocket.getOutputStream();
@@ -122,7 +124,20 @@ public class Client implements Runnable{
         {
             case messageToClient:
             {
-                int id = BitConverter.toInt32(GetMessage(4), 0);
+
+                int nickSize = BitConverter.toInt32(GetMessage(4), 0);
+
+                String nickname = null;
+
+                try
+                {
+                    nickname = new String(GetMessage(nickSize), "UTF-8");
+                }
+                catch(UnsupportedEncodingException e)
+                {
+                    e.printStackTrace();
+                }
+
                 int fileSize = BitConverter.toInt32(GetMessage(4), 0);
 
                 do
@@ -137,9 +152,10 @@ public class Client implements Runnable{
                     }
                 }while (temp.length < fileSize);
 
-                Log.d("Клиент", "Размер принятого буффера = " + temp.length);
+                msg = _clientHandler.obtainMessage(messageToClient, 1, 0, nickname);
+                _clientHandler.sendMessage(msg);
 
-                msg = _clientHandler.obtainMessage(messageToClient, id, 0, temp);
+                msg = _clientHandler.obtainMessage(messageToClient, 2, 0, temp);
                 _clientHandler.sendMessage(msg);
 
                 break;
@@ -158,30 +174,47 @@ public class Client implements Runnable{
 
             case clientOut:
             {
-                //надо еще принимать ник ушедшего
-                int id = BitConverter.toInt32(GetMessage(4), 0);
+                int nickSize = BitConverter.toInt32(GetMessage(4), 0);
+                String nickname = null;
 
-                msg = _clientHandler.obtainMessage(clientOut, id);
+                try
+                {
+                    nickname = new String(GetMessage(nickSize), "UTF-8");
+                }
+                catch(UnsupportedEncodingException e)
+                {
+                    e.printStackTrace();
+                }
+
+                msg = _clientHandler.obtainMessage(clientOut, nickname);
                 _clientHandler.sendMessage(msg);
-
-                break;
-            }
-
-            case connect:
-            {
-
-                break;
-            }
-
-
-            case disconnect:
-            {
 
                 break;
             }
 
             case activeClients:
             {
+                int clientsNumber = BitConverter.toInt32(GetMessage(4), 0);
+                String[] clients = new String[clientsNumber];
+
+                int strSize;
+
+                for(int i = 0; i < clientsNumber; i++)
+                {
+                    strSize = BitConverter.toInt32(GetMessage(4), 0);
+
+                    try
+                    {
+                        clients[i] = new String(GetMessage(strSize), "UTF-8");
+                    }
+                    catch(UnsupportedEncodingException e)
+                    {
+                        e.printStackTrace();
+                    }
+                }
+
+                msg = _clientHandler.obtainMessage(activeClients, clients);
+                _clientHandler.sendMessage(msg);
 
                 break;
             }
@@ -197,7 +230,6 @@ public class Client implements Runnable{
         {
             _outStream.write(message);
             _outStream.flush();
-            Log.d("Клиент", "Ушло сообщение на сервер");
         }
         catch (IOException e)
         {

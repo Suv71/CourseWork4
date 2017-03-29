@@ -15,7 +15,8 @@ namespace ServerApp
         private int _port;
         private Socket _listenSocket;
 
-        public List<ClientHandler> _clients;
+        private List<ClientHandler> _clients;
+        private int clientsInChat;
 
         public RadioServer(string serverIpAdress, int port)
         {
@@ -23,16 +24,12 @@ namespace ServerApp
             _port = port;
             _listenSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             _clients = new List<ClientHandler>();
+            clientsInChat = 0;
         }
 
         public void AddClient(ClientHandler client)
         {
             _clients.Add(client);
-            /*Console.WriteLine("Id clients:");
-            foreach(var c in _clients)
-            {
-                Console.WriteLine(c.Id);
-            }*/
         }
 
         public void RemoveClient(int id)
@@ -40,114 +37,94 @@ namespace ServerApp
             _clients.Remove(_clients.FirstOrDefault(c => c.Id == id));
         }
 
-        public void SendMessageToClient(int id, byte[] message)
+        public void AddClientInChat()
         {
-            ClientHandler client = _clients.FirstOrDefault(c => c.Id == id);
-            Console.WriteLine("Отправляю этому = " + client.Id);
-            client.SendMessage(message);
+            clientsInChat += 1;
         }
 
-        public byte[] GetActiveClients(int IdSender)
+        public void RemoveClientFromChat()
         {
-            if (_clients.Count != 1)
+            clientsInChat -= 1;
+        }
+
+        private String[] GetClientsInChat(String nickname)
+        {
+            if (clientsInChat > 1)
             {
-                int[] idClients = new int[_clients.Count - 1];
+                String[] clients = new String[_clients.Count - 1];
                 int i = 0;
                 foreach (var client in _clients)
                 {
-                    if (client.Id != IdSender)
+                    if (client.Nickname != nickname)
                     {
-                        idClients[i++] = client.Id;
+                        clients[i++] = client.Nickname;
                     }
                 }
 
-                byte[] res;
-                res = BitConverter.GetBytes(idClients[0]);
-
-                for (int j = 1; j < idClients.Length; j++)
-                {
-                    res = MergeArrays(res, BitConverter.GetBytes(idClients[j]));
-                }
-
-                return res;
+                return clients;
             }
             else
             {
                 return null;
             }
-            
         }
 
-        public int[] GetIdClients(byte[] clients)
+        public IReadOnlyList<ClientHandler> GetClients()
         {
+            return _clients.AsReadOnly();
+        }
+
+        public void SendMessageToClient(String nickname, byte[] message)
+        {
+            ClientHandler client = _clients.FirstOrDefault(c => c.Nickname == nickname);
+            client.SendMessage(message);
+        }
+
+        
+
+        public void SendActiveClients(String nickname)
+        {
+            String[] clients = GetClientsInChat(nickname);
+
             if(clients != null)
             {
-                int[] res = new int[clients.Length / 4];
+                SendMessageToClient(nickname, BitConverter.GetBytes(Commands.activeClients));
+                SendMessageToClient(nickname, BitConverter.GetBytes(clients.Length));
 
-                int j = 0;
-                for (int i = 0; i < res.Length; i++)
+                for (int i = 0; i < clients.Length; i++)
                 {
-                    res[i] = BitConverter.ToInt32(clients, j);
-                    j += 4;
+                    SendMessageToClient(nickname, BitConverter.GetBytes(clients[i].Length));
+                    SendMessageToClient(nickname, Encoding.UTF8.GetBytes(clients[i]));
                 }
-
-                return res;
             }
             else
             {
-                return null;
-            }
-            
+                //Console.WriteLine("На сервере только один пользователь");
+            } 
         }
-
-        public byte[] MergeArrays(byte[] first, byte[] second)
-        {
-            byte[] res;
-            if (first != null && second != null)
-            {
-                res = new byte[first.Length + second.Length];
-                for (int i = 0; i < first.Length; i++)
-                {
-                    res[i] = first[i];
-                }
-
-                int j = first.Length;
-                for (int i = 0; i < second.Length; i++)
-                {
-                    res[j++] = second[i];
-                }
-
-                return res;
-            }
-            else
-            {
-                return null;
-            }
-
-        }
-
-        public void SendAllNewClient(int idFrom, byte[] nickname)
+  
+        public void SendAllNewClient(int idSender, byte[] nickname)
         {
             if(_clients.Count > 1)
             {
-                SendBroadcastMessage(idFrom, BitConverter.GetBytes(Commands.newClient));
-                SendBroadcastMessage(idFrom, BitConverter.GetBytes(nickname.Length));
-                SendBroadcastMessage(idFrom, nickname);
+                SendBroadcastMessage(idSender, BitConverter.GetBytes(Commands.newClient));
+                SendBroadcastMessage(idSender, BitConverter.GetBytes(nickname.Length));
+                SendBroadcastMessage(idSender, nickname);
             }
             else
             {
-                Console.WriteLine("На сервере только один клиент");
+                Console.WriteLine("На сервере только один пользователь");
             }
             
         }
 
-        public void SendAllClientOut(int idFrom)
+        public void SendAllClientOut(int idSender, byte[] nickname)
         {
             if (_clients.Count > 1)
             {
-                SendBroadcastMessage(idFrom, BitConverter.GetBytes(Commands.clientOut));
-                SendBroadcastMessage(idFrom, BitConverter.GetBytes(idFrom));
-                //SendBroadcastMessage(idFrom, nickname);
+                SendBroadcastMessage(idSender, BitConverter.GetBytes(Commands.clientOut));
+                SendBroadcastMessage(idSender, BitConverter.GetBytes(nickname.Length));
+                SendBroadcastMessage(idSender, nickname);
             }
             else
             {
@@ -156,13 +133,13 @@ namespace ServerApp
 
         }
 
-        public void SendBroadcastMessage(int idFrom, byte[] message)
+        public void SendBroadcastMessage(int idSender, byte[] message)
         {
             for (int i = 0; i < _clients.Count; i++)
             {
-                if (_clients[i].Id != idFrom) // если id клиента не равно id отправляющего
+                if (_clients[i].Id != idSender) 
                 {
-                    _clients[i].SendMessage(message); //передача данных
+                    _clients[i].SendMessage(message);
                 }
             }
         }
@@ -183,7 +160,7 @@ namespace ServerApp
                     Socket connectionHandler = _listenSocket.Accept();
 
                     ClientHandler clientHandler = new ClientHandler(connectionHandler, this);
-                    Console.WriteLine("Новый клиент: " + clientHandler.Id);
+                    Console.WriteLine(new StringBuilder("Клиент с id = " + clientHandler.Id + " подключился к серверу").ToString());
                     new Thread(new ThreadStart(clientHandler.Process)).Start();
                 }
             }

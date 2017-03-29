@@ -1,5 +1,6 @@
 package com.example.asus.radioclient;
 
+import android.app.Activity;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -30,36 +31,22 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.Socket;
 
-public class MainActivity extends AppCompatActivity {
-    final String LOG_TAG = "testService";
+public class MainActivity extends Activity {
 
     private Button _btn;
     private EditText _et;
     private TextView _tv;
 
-    private String fileName;
-    private String fileName2;
-
     private byte[] temp;
 
-    private VoiceWorker _voiceWorker;
-    private FileWorker _fileWorker;
-
-    private BroadcastReceiver _receiver;
+    private BroadcastReceiver _connectionReceiver;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        fileName = Environment.getExternalStorageDirectory() + "/record.3gpp";
-
-        fileName2 = Environment.getExternalStorageDirectory() + "/record2.3gpp";
-
-        _voiceWorker = new VoiceWorker();
-        _fileWorker = new FileWorker();
-
-        _receiver = new BroadcastReceiver() {
+        _connectionReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
 
@@ -67,7 +54,7 @@ public class MainActivity extends AppCompatActivity {
                 {
                     case Client.connectErr:
                     {
-                        Toast.makeText(context, "Не удается подключиться к серверу.", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(context, "Адрес и/или порт сервера не верны", Toast.LENGTH_SHORT).show();
                         _btn = (Button)findViewById(R.id.btnConnectServer);
                         _btn.setEnabled(true);
 
@@ -95,56 +82,21 @@ public class MainActivity extends AppCompatActivity {
 
                         break;
                     }
-
-                    case Client.messageToClient:
-                    {
-                        int id = intent.getIntExtra("id", 0);
-                        Log.d(LOG_TAG, "id отправителя принятое в активити = " + id);
-                        temp = intent.getByteArrayExtra("fileBuf");
-                        Log.d(LOG_TAG, "Размер буффера файла принятого в активити = " + temp.length);
-
-                        _fileWorker.BytesToFile(temp, fileName2);
-                        _voiceWorker.Play(fileName2);
-                        break;
-                    }
-
-                    case Client.newClient:
-                    {
-                        String nickname = intent.getStringExtra("nickname");
-                        Log.d(LOG_TAG, "Nickname нового клиента = " + nickname);
-                        break;
-                    }
-
-                    case Client.clientOut:
-                    {
-                        int id = intent.getIntExtra("id", 0);
-                        Log.d("Активити", "Клиент покинул нас = " + id);
-
-                        break;
-                    }
                 }
-
             }
         };
 
 
         IntentFilter intFilt = new IntentFilter("Connection");
 
-        registerReceiver(_receiver, intFilt);
+        registerReceiver(_connectionReceiver, intFilt);
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
 
-        /*Log.d("Команда disconnect", "Работаем");
-        Intent intent = new Intent(this, NetworkService.class);
-        intent.putExtra("command", Client.disconnect);
-        startService(intent);*/
-
-        _voiceWorker.FreeResources();
-        unregisterReceiver(_receiver);
-        stopService(new Intent(this, NetworkService.class));
+        unregisterReceiver(_connectionReceiver);
     }
 
     public void ConnectServer(View v)
@@ -165,7 +117,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
 
-        if(!ipAdress.equals("") || port != 0)
+        if(!ipAdress.equals("") && port != 0)
         {
             startService(new Intent(this, NetworkService.class).putExtra("serverIP", ipAdress).putExtra("serverPort", port));
             _btn = (Button)findViewById(R.id.btnConnectServer);
@@ -183,24 +135,12 @@ public class MainActivity extends AppCompatActivity {
 
     public void ConnectChat(View v)
     {
-
         _et = (EditText)findViewById(R.id.etNickname);
         String nickname = _et.getText().toString();
 
         if(!nickname.equals(""))
         {
             temp = nickname.getBytes();
-            Log.d("Размер ника", String.valueOf(temp.length));
-
-            try
-            {
-                Log.d("String", new String(temp, "UTF-8"));
-            }
-            catch (UnsupportedEncodingException e)
-            {
-                e.printStackTrace();
-            }
-
 
             Intent intent = new Intent(this, NetworkService.class);
             intent.putExtra("command", Client.connect);
@@ -210,63 +150,11 @@ public class MainActivity extends AppCompatActivity {
 
             intent = new Intent(this, ChatActivity.class);
             startActivity(intent);
+            finish();
         }
         else
         {
-            Toast.makeText(this, "Введите ник для кодключения к чату", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Введите ник для подключения к чату", Toast.LENGTH_SHORT).show();
         }
-    }
-
-
-    public void recordStart(View v) {
-        _voiceWorker.StartRecord(fileName);
-    }
-
-    public void recordStop(View v) {
-        _voiceWorker.StopRecord();
-    }
-
-    public void playStart(View v) {
-        _voiceWorker.Play(fileName);
-    }
-
-    public void OnClickDisconnect(View v) {
-        Log.d("Команда disconnect", "Работаем");
-        Intent intent = new Intent(this, NetworkService.class);
-        intent.putExtra("command", Client.disconnect);
-        startService(intent);
-        onDestroy();
-    }
-
-    public void OnClickConnect(View view) {
-        String nickname = _et.getText().toString();
-
-
-        temp = nickname.getBytes();
-        Log.d("Размер стринг", String.valueOf(temp.length));
-
-        try {
-            Log.d("String", new String(temp, "UTF-8"));
-        } catch (UnsupportedEncodingException e) {
-            e.printStackTrace();
-        }
-
-
-        Intent intent = new Intent(this, NetworkService.class);
-        intent.putExtra("command", Client.connect);
-        intent.putExtra("nickSize", temp.length);
-        intent.putExtra("nickname", temp);
-        startService(intent);
-    }
-
-    public void OnClickSend(View view) {
-        int id = Integer.decode(_et.getText().toString());
-        Intent intent = new Intent(this, NetworkService.class);
-        temp = _fileWorker.FileToBytes(fileName);
-        intent.putExtra("command", Client.messageToClient);
-        intent.putExtra("id", id);
-        intent.putExtra("fileBuf", temp);
-        Log.d(LOG_TAG, "Размер отправляемого из активити файла = " + temp.length);
-        startService(intent);
     }
 }
