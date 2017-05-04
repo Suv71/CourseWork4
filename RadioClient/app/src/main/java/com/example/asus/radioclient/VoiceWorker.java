@@ -30,7 +30,7 @@ public class VoiceWorker
 
     private boolean _isRecording = false;
 
-    private byte[] _recordingResult = new byte[_recorderBufferSize * 4];
+    private byte[] _recordingResult;
 
     private void ReleaseRecorder()
     {
@@ -54,6 +54,8 @@ public class VoiceWorker
     {
         ReleaseRecorder();
 
+        _recordingResult = new byte[_recorderBufferSize * 100];
+
         _recorder = new AudioRecord(_audioSource, _sampleRate, _inChannels, _audioEncoding, _recorderBufferSize);
 
         _recorder.startRecording();
@@ -76,7 +78,7 @@ public class VoiceWorker
 
                 while (_isRecording) {
                     currentCount = _recorder.read(audioBuffer, 0, _recorderBufferSize);
-                    System.arraycopy(audioBuffer, 0 + totalCount, _recordingResult, 0, currentCount);
+                    System.arraycopy(audioBuffer, 0, _recordingResult, 0 + totalCount, currentCount);
                     totalCount += currentCount;
                 }
 
@@ -86,8 +88,6 @@ public class VoiceWorker
                 _recordingResult = new byte[totalCount];
                 System.arraycopy(temp, 0, _recordingResult, 0, totalCount);
 
-                temp = null;
-                audioBuffer = null;
             }
         }).start();
     }

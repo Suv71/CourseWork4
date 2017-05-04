@@ -21,13 +21,9 @@ import java.util.List;
 
 public class ChatActivity extends Activity {
 
-    //private final String _outFilePath = Environment.getExternalStorageDirectory() + "/outRecord.3gpp";
-    //private final String _inFilePath = Environment.getExternalStorageDirectory() + "/inRecord.3gpp";
-
     private byte[] _temp;
 
     private VoiceWorker _voiceWorker;
-    //private FileWorker _fileWorker;
 
     private BroadcastReceiver _chatReceiver;
 
@@ -42,7 +38,6 @@ public class ChatActivity extends Activity {
         setContentView(R.layout.activity_chat);
 
         _voiceWorker = new VoiceWorker();
-        //_fileWorker = new FileWorker();
 
         _lv = (ListView)findViewById(R.id.lvUserList);
 
@@ -61,7 +56,7 @@ public class ChatActivity extends Activity {
                 {
                     case Client.messageToClient:
                     {
-                        if(intent.hasExtra("nickname"))
+                        /*if(intent.hasExtra("nickname"))
                         {
                             _tv = (TextView)findViewById(R.id.tvInUser);
                             _tv.setText(intent.getStringExtra("nickname"));
@@ -70,9 +65,10 @@ public class ChatActivity extends Activity {
                         if(intent.hasExtra("fileBuf"))
                         {
                             _temp = intent.getByteArrayExtra("fileBuf");
-                            //_fileWorker.BytesToFile(_temp, _inFilePath);
                             _voiceWorker.Play(_temp);
-                        }
+                        }*/
+
+                        System.out.println("HI");
 
                         break;
                     }
@@ -154,8 +150,6 @@ public class ChatActivity extends Activity {
         if(position != -1)
         {
             Intent intent = new Intent(this, NetworkService.class);
-
-            //_temp = _fileWorker.FileToBytes(_outFilePath);
 
             intent.putExtra("command", Client.messageToClient);
             intent.putExtra("nickname", _users.get(position));

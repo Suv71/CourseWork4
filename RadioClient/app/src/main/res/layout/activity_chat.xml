@@ -62,7 +62,8 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="10dp"
                 android:onClick="StartRecord"
-                android:id="@+id/btnStartRecord" />
+                android:id="@+id/btnStartRecord"
+                android:layout_marginBottom="10dp" />
 
             <Button
                 android:text="Остановить запись"
@@ -70,7 +71,8 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="10dp"
                 android:onClick="StopRecord"
-                android:id="@+id/btnStopRecord" />
+                android:id="@+id/btnStopRecord"
+                android:layout_marginBottom="10dp" />
 
             <Button
                 android:text="Отправить"

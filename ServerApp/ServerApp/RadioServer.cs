@@ -14,14 +14,20 @@ namespace ServerApp
         private string _serverIpAdress;
         private int _port;
         private Socket _listenSocket;
+        private IPEndPoint _ipEndPoint;
 
         private List<ClientHandler> _clients;
         private int clientsInChat;
 
         public RadioServer(string serverIpAdress, int port)
         {
+            IPHostEntry ipHost = Dns.GetHostEntry(Dns.GetHostName());
+            IPAddress ipAddr = ipHost.AddressList[0];
+            _ipEndPoint = new IPEndPoint(ipAddr, 31010);
+
             _serverIpAdress = serverIpAdress;
             _port = port;
+            //_listenSocket = new Socket(ipAddr.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
             _listenSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             _clients = new List<ClientHandler>();
             clientsInChat = 0;
@@ -49,16 +55,17 @@ namespace ServerApp
 
         private String[] GetClientsInChat(String nickname)
         {
-            if (clientsInChat > 1)
+            if (clientsInChat > 0)//изменено
             {
-                String[] clients = new String[_clients.Count - 1];
+                String[] clients = new String[_clients.Count]; //изменено
                 int i = 0;
                 foreach (var client in _clients)
                 {
-                    if (client.Nickname != nickname)
+                    /*if (client.Nickname != nickname)
                     {
                         clients[i++] = client.Nickname;
-                    }
+                    }*/
+                    clients[i++] = client.Nickname;
                 }
 
                 return clients;
@@ -151,6 +158,7 @@ namespace ServerApp
             try
             {
                 _listenSocket.Bind(serverIpPoint);
+                Console.WriteLine(serverIpPoint.Address);
                 _listenSocket.Listen(10);
 
                 Console.WriteLine("Сервер запущен. Ожидание подключений...");

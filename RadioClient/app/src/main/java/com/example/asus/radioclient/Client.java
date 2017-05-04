@@ -23,6 +23,7 @@ import java.io.Serializable;
 import java.io.UTFDataFormatException;
 import java.io.UnsupportedEncodingException;
 import java.net.ConnectException;
+import java.net.InetAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.nio.charset.Charset;
@@ -71,6 +72,9 @@ public class Client implements Runnable{
         {
             _clientHandler.sendEmptyMessageDelayed(checkConnectionState, 5000);
 
+            InetAddress addr = InetAddress.getByName(_serverIP);
+
+            //_clientSocket = new Socket(addr, _serverPort);
             _clientSocket = new Socket(_serverIP, _serverPort);
 
             _outStream = _clientSocket.getOutputStream();
